@@ -197,8 +197,6 @@ export class TransferInteractiveBuilderCommand implements CommandInterface {
 
   async promptUtxoSelection(info: IUtxoBalanceSummary): Promise<ISelectedUtxo[]> {
     let selectedUtxos: ISelectedUtxo[] = [];
-
-
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout

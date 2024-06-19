@@ -24,7 +24,7 @@ export interface KeyPair {
     privateKey?: string
 }
 
-export const createKeyPair = async (phrase: string = '', path = `m/44'/0'/0'/0/0`) : Promise<KeyPair> => {
+export const createKeyPair = async (phrase: string = '', path = `m/44'/0'/0'/0/0`, isLegacy = false) : Promise<KeyPair> => {
     if (!phrase || phrase === '') {
         const phraseResult = await createMnemonicPhrase();
         phrase = phraseResult.phrase;
@@ -34,6 +34,8 @@ export const createKeyPair = async (phrase: string = '', path = `m/44'/0'/0'/0/0
     const childNodePrimary = rootKey.derivePath(path);
     // const p2pkh = bitcoin.payments.p2pkh({ pubkey: childNodePrimary.publicKey });
     const childNodeXOnlyPubkeyPrimary = toXOnly(childNodePrimary.publicKey);
+    
+    // Taproot adress
     const p2trPrimary = bitcoin.payments.p2tr({
         internalPubkey: childNodeXOnlyPubkeyPrimary,
         network: NETWORK
@@ -41,17 +43,19 @@ export const createKeyPair = async (phrase: string = '', path = `m/44'/0'/0'/0/0
     if (!p2trPrimary.address || !p2trPrimary.output) {
         throw "error creating p2tr"
     }
-    /* const p2pkhPrimary = bitcoin.payments.p2pkh({
+    // Legacy p2pkh address
+    const p2pkhPrimary = bitcoin.payments.p2pkh({
         pubkey: childNodePrimary.publicKey,
         network: NETWORK
     });
     // console.log('p2pkhPrimary', p2pkhPrimary, p2pkhPrimary.address.toString())
-    */
+    
     // Used for signing, since the output and address are using a tweaked key
     // We must tweak the signer in the same way.
-    const tweakedChildNodePrimary = childNodePrimary.tweak(
+    /* const tweakedChildNodePrimary = childNodePrimary.tweak(
         bitcoin.crypto.taggedHash('TapTweak', childNodeXOnlyPubkeyPrimary),
     );
+    */
 
     // Do a sanity check with the WIF serialized and then verify childNodePrimary is the same
     const wif = childNodePrimary.toWIF();
@@ -60,8 +64,13 @@ export const createKeyPair = async (phrase: string = '', path = `m/44'/0'/0'/0/0
     if (childNodePrimary.publicKey.toString('hex') !== keypair.publicKey.toString('hex')) {
         throw 'createKeyPair error child node not match sanity check'
     }
+    // Use the legacy or taproot address as chosen
+    let addressUsed = p2trPrimary.address;
+    if (isLegacy) {
+        addressUsed = p2pkhPrimary.address;
+    }
     return {
-        address: p2trPrimary.address,
+        address: addressUsed, // p2trPrimary.address,
         publicKey: childNodePrimary.publicKey.toString('hex'),
         publicKeyXOnly: childNodeXOnlyPubkeyPrimary.toString('hex'),
         path,
@@ -94,6 +103,8 @@ export const createPrimaryAndFundingImportedKeyPairs = async (phrase?: string | 
     return {
         wallet: {
             phrase: phraseResult,
+            // Use legacy p2pkh address format for auth type for now
+            auth: await createKeyPair(phraseResult, `${pathUsed}/2/0`, true),
             primary: await createKeyPair(phraseResult, `${pathUsed}/0/0`),
             funding: await createKeyPair(phraseResult, `${pathUsed}/1/0`)
         },
