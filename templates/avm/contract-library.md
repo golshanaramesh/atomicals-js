@@ -6,7 +6,7 @@ This is a work in progress repository of sample AVM contracts.
 
 A crowd funding contract to collect funds in the form of ARC-20 tokens. The deployer specifies a time limit, expressed as a block height and also an authorized public key which is allowed to withdraw the ARC-2O tokens after the block height has elapsed.
 
-(protocol.crowdfund-basic.json)[protocol.crowdfund-basic.json]
+[protocol.crowdfund-basic.json](protocol.crowdfund-basic.json)
 
 ### How it works
 
